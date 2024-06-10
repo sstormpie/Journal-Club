@@ -1,0 +1,320 @@
+---
+title: "Radar-Chart"
+author: "Jarno Jacob Duiker & Storm Steller"
+date: "2024-05-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Radar Chart
+
+```{r}
+library(fmsb)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+#Lees de data in
+research_data <- read.csv("Studenthap_ant.csv")
+
+#Verander de namen van de kolommen
+colnames(research_data) <- c("Tijdstempel", "Sexe", "Niveau", "Jaar", "Vakgebied", "Woonsituatie", "Stad", "Nationaal/Internationaal", "Gelovig", "Relatie", "Algemeen_Geluk", "Fysiek_Geluk", "Belang_Fysieke_Gezondheid", "Belang_Buitenschools_Contact", "Belang_Sociale_Activiteiten", "Band_Ouders", "Geluk_Woonsituatie", "Thuisgevoel", "Belang_Academische_Prestaties", "Financiele_Situatie", "Belang_Geld", "Gebruik_Verdovende_Middelen", "Belang_Verdovende_Middelen", "Lekker_In_Vel", "Geluk_Na_Enquête")
+```
+
+```{r}
+head(research_data)
+```
+
+```{r}
+#Haal de kolommen die in de chart moeten uit de dataframe
+display_data <- select(research_data, c(Fysiek_Geluk,
+                                        Belang_Buitenschools_Contact,
+                                        Geluk_Woonsituatie,
+                                        Thuisgevoel,
+                                        Belang_Academische_Prestaties,
+                                        Belang_Geld,
+                                        Lekker_In_Vel))
+
+head(display_data)
+```
+
+```{r}
+#Zet een maximum- en minimum waarde in voor de grafiek
+max_min <- data.frame(Fysiek_Geluk = c(10,0),
+                       Belang_Buitenschools_Contact = c(10,0),
+                       Geluk_Woonsituatie = c(10,0),
+                       Thuisgevoel = c(10,0),
+                       Belang_Academische_Prestaties = c(10,0),
+                       Belang_Geld = c(10,0),
+                       Lekker_In_Vel = c(10,0)
+                      )
+
+row.names(max_min) <- c("Max", "Min")
+
+#Bind de max en min aan data en zet het in een dataframe
+df <- rbind(max_min, display_data)
+head(df)
+```
+
+## Visualisatie
+
+### Radar Chart Met Alle Studenten
+```{r}
+radarchart(df)
+```
+
+Dit een radar chart met alle studenten uit het dataframe. Het valt op dat de chart heel vol is, waardoor die niet goed te lezen is.
+
+
+### Radar Chart Met 1 Student
+```{r}
+#Selecteer de data van 1 individu
+student_1 <- df[c("Max", "Min", "1"), ]
+
+radarchart(student_1)
+```
+
+Dit is een Radarchart met de gegevens van 1 student. Dit ziet er al veel rustiger uit, maar dit kan beter opgemaakt.
+
+
+```{r}
+#Deze functie maakt een mooie radar chart, als parameters neemt de functie data, een kleur en een titel
+js_radarchart <- function(data, 
+                             color,
+                             vlabels = colnames(data),
+                             title) {
+    radarchart(
+        data, axistype = 1,
+        
+        #Hier worden de kleuren en de lijntypes van de grafiekdata opgezet
+        pcol = color, 
+        pfcol = scales::alpha(color, 0.5), 
+        plwd = 1, 
+        plty = 1,
+        
+        #Hier is de opmaak van het rooster van de grafiek
+        cglcol = "grey", 
+        cglty = 1, 
+        cglwd = .8,
+        caxislabels = NULL, 
+        calcex = .75, 
+        
+        #Hier wordt de kleur en grootte van de as labels bepaald
+        axislabcol = "black",
+        vlcex = .80, 
+        vlabels = vlabels,
+        title = title,
+    )
+}
+```
+
+Hierboven hebben we een functie gemaakt die een radar chart plot die wel mooi is.
+
+
+### Mooie Radar Chart met 1 student
+```{r}
+#Zet grafische parameters voor de grafieken
+op <- par(mar = c(1, 1, 1, 1))
+
+js_radarchart(data= student_1, color= "#c8e1cc", title= "Het geluk van onze eerste student")
+par(op)
+```
+
+Dit ziet er al een stuk beter uit. Nu zit er een titel in de grafiek, zit er een kleur vast aan het individu voor de duidelijkheid, en staat er in welke eenheid de grafiek is.
+
+
+### 5 Studenten Naast Elkaar
+```{r}
+#Zet de kleuren voor de idividuen
+colors <- c("red", "purple", "orange", "yellow", "blue")
+
+#Zet de titels voor de individuen
+titles <- c("Student 1", "Student 2", "Student 3", "Student 4", "Student 5")
+
+
+op <- par(mar = c(1, 1, 1, 1))
+par(mfrow = c(1,3))
+
+#Met een for loop maken we voor elk individu een aparte grafiek
+for(i in 1:5){
+  js_radarchart(
+    data = df[c(1, 2, i+2), ],
+    color = colors[i], 
+    title = titles[i]
+    )
+}
+
+par(op)
+```
+
+Hier zie je 5 grafieken. In elk staat het geluk van een student die onze enquête heeft ingevuld. Hiermee kan je ongeveer de verschillen tussen van het geluk tussen de individuen zien, maar het is wat duidelijker als je de individuen overlapt in een enkele grafiek.
+
+### Maken Belangrijke Functie
+```{r}
+#Een functie die het gemiddelde van data in een dataframe berekent en er een nieuwe dataframe van maakt
+mean_frame <- function(data){
+  as.data.frame(t(colMeans(data)))
+}
+
+#Een functie die data afrond
+round_data <- function(data, digits) {
+  nums <- vapply(data, is.numeric, FUN.VALUE = logical(1))
+ 
+  data[,nums] <- round(data[,nums], digits = digits)
+ 
+  (data)
+}
+
+#Maak een dataframe met de gemiddelden van alle variabelen
+df_mean <- mean_frame(display_data)
+
+#Rond het gemiddelde af tot getallen met 1 decimaal
+df_mean <- round_data(df_mean, 1)
+
+#Geef de data een maximale- en minimale grens voor in de grafiek
+df_mean <- rbind(max_min, df_mean)
+
+df_mean
+```
+
+Hierboven hebben we een functie gemaakt die de gemiddelden van alle variabelen uitrekent en ze in een nieuw dataframe zet. Daarna hebben we ook een functie gemaakt die de data afrond, omdat zoveel decimalen onnodig zijn.
+
+
+### Grafiek Met Gemiddeld Geluk
+```{r}
+op <- par(mar = c(1, 1, 1, 1))
+
+#Maak een grafiek van het gemiddeld geluk van alle individuen uit de dataset
+js_radarchart(data= df_mean, color= "#6bdcff", title= "Gemiddeld geluk")
+
+par(op)
+```
+
+Hierboven zie je een grafiek met het gemiddeld geluk van alle individuen uit de dataset. Dit is wel mooi, maar nu willen we vergelijken. Nu gaan wij de data opsplitsen zodat we ze met elkaar kunnen vergelijken.
+
+
+### Grafiek Gesplitst Op Sexe
+```{r}
+#Voege de sexe kolom terug aan de dataframe
+display_data$Sexe <- research_data$Sexe
+
+#Verander de namen van de waarden om het later makkelijker te maken
+display_data$Sexe[display_data$Sexe == 'Vrouw (Female)'] <- "Vrouw"
+display_data$Sexe[display_data$Sexe == 'Man (Male)'] <- "Man"
+display_data$Sexe[display_data$Sexe == 'Anders (Other)'] <- "Anders"
+
+head(display_data)
+```
+
+```{r}
+#Reken de gemiddelden van de individuen gesplitst op sexe
+mean_man <- mean_frame(display_data[display_data$Sexe == 'Man', 1:7])
+mean_vrouw <- mean_frame(display_data[display_data$Sexe == 'Vrouw', 1:7])
+mean_anders <- mean_frame(display_data[display_data$Sexe == 'Anders', 1:7])
+
+#Zet alle gemiddelden in een dataframe met de maximale- en minimale grens
+df_mean_sexe <- rbind(max_min, mean_man, mean_vrouw, mean_anders)
+
+#Zet de correcte titels voor de rijen in de dataframe
+rownames(df_mean_sexe) <- c("Max", "Min", "Man", "Vrouw", "Anders")
+
+#Rond de waarden in de dataframe af
+df_mean_sexe <- round_data(df_mean_sexe, 1)
+
+df_mean_sexe
+```
+
+```{r}
+op <- par(mar = c(1, 1, 1, 1))
+
+#Zet de kleuren voor de individuen in de grafiek
+colors <- c("#6bdcff", "#d92323", "#ffec5c")
+
+js_radarchart(data= df_mean_sexe, color= colors, title= "Gemiddeld geluk per sexe")
+
+#Maak een legenda voor de grafiek
+legend(
+  x = "right", 
+  legend = c("Man", "Vrouw", "Anders"), 
+  horiz = FALSE,
+  bty = "n", 
+  pch = 20 , 
+  col = colors,
+  text.col = "black", 
+  cex = 1, 
+  pt.cex = 1.5
+  )
+
+par(op)
+```
+
+Hierboven zie je een grafiek van het gemiddeld geluk van de individuen uit de dataset gesplitst op sexe. Dit is mooi. Hier kan je goed de verschillen zien tussen de 3 sexes. Wat opvalt is dat de categorie anders gemiddeld op bijna alles lager scoort dan de rest.
+
+
+### Voorbeeld Van Een Uitschieter
+```{r}
+#Manipuleer de data zodat er uitschieters zijn
+df_mean_sexe["Belang_Academische_Prestaties"][df_mean_sexe["Belang_Academische_Prestaties"] == 7.1] <- 10
+df_mean_sexe["Belang_Buitenschools_Contact"][df_mean_sexe["Belang_Buitenschools_Contact"] == 9.0] <- 0
+
+df_mean_sexe
+```
+
+```{r}
+op <- par(mar = c(1, 1, 1, 1))
+
+#Zet de kleuren voor de individuen in de grafiek
+colors <- c("#009E73", "#CC79A7", "#E69F00")
+
+js_radarchart(data= df_mean_sexe, color= colors, title= "Voorbeeld uitschieters")
+
+#Maak een legenda voor de grafiek
+legend(
+  x = "right", 
+  legend = c("Man", "Vrouw", "Anders"), 
+  horiz = FALSE,
+  bty = "n", 
+  pch = 20 , 
+  col = colors,
+  text.col = "black", 
+  cex = 1, 
+  pt.cex = 1.5
+  )
+
+par(op)
+```
+
+Hierboven zie je een grafiek met een voorbeeld van 2 uitschieters. De mannen vinden gemiddeld hun academische prestaties veel belangrijker dan de rest en de categorie anders vindt gemiddeld buitenschools contact veel minder belangrijk dan de rest. (Dit is niet de daadwerkelijke data uit de dataset. Deze data is gemanipuleerd om uitschieters te creeëren)
+
+
+### Grafiek Met Verschillende Schaal In Waarden
+```{r}
+#Zet een maximum- en minimum waarde in voor de grafiek
+max_min5 <- data.frame(Fysiek_Geluk = c(10,0),
+                       Belang_Buitenschools_Contact = c(5,0),
+                       Geluk_Woonsituatie = c(10,0),
+                       Thuisgevoel = c(5,0),
+                       Belang_Academische_Prestaties = c(10,0),
+                       Belang_Geld = c(5,0),
+                       Lekker_In_Vel = c(10,0)
+                      )
+row.names(max_min5) <- c("Max", "Min")
+
+#Haal de oude maximum- en minimumgrens weg
+df_mean <- df_mean[, 3]
+
+#Bind de nieuwe maximum- en minimumgrens aan de dataframe
+df_disproportioneel <- rbind(max_min5, df_mean)
+
+df_disproportioneel
+```
+
+```{r}
+js_radarchart(data= df_disproportioneel, color="#6bdcff", title= "Wat")
+```
+
+Hierboven zie je een poging tot een grafiek te plotten met verschillende schalen in waarden. Zoals je ziet schiet de waarde voorbij de as, wat niet de bedoeling is. Er ook is geen optie in de functie om ervoor te zorgen dat de waarde niet voorbij de as schiet. Waarschijnlijk gebeurt dit omdat dit ook wel eens gebruikt wordt om extreme uitschieters te laten zien.
